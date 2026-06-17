@@ -37,8 +37,10 @@ Alta esticada + divergência + volume vendedor = venda parcial/proteção.
 ## Arquivos importantes
 
 ```text
-bot.py                     Entrada principal
+bot.py                     Entrada principal do bot
+backtest.py                Entrada principal do backtest
 config.example.yaml         Modelo de configuração sem segredos
+backtest.example.yaml       Modelo de configuração do backtest
 .env.example                Modelo das variáveis de ambiente
 tradebot/                   Código principal
 ```
@@ -55,6 +57,38 @@ cp config.example.yaml config.yaml
 
 Edite `.env` com suas chaves da Binance e `config.yaml` com o modo desejado.
 
+## Rodar backtest
+
+O backtest usa dados públicos da Binance e não envia ordens.
+
+```bash
+cp backtest.example.yaml backtest.yaml
+python backtest.py --config backtest.yaml --save
+```
+
+Saídas geradas em `backtests/results/`:
+
+```text
+metrics.json       Métricas principais
+equity_curve.csv   Curva de patrimônio
+trades.csv         Trades simulados
+decisions.csv      Decisões diárias do modelo
+```
+
+Métricas calculadas:
+
+```text
+retorno total
+CAGR
+max drawdown
+Sharpe
+Sortino
+profit factor
+win rate
+exposure time
+resultado vs buy and hold
+```
+
 ## Rodar em paper trade
 
 ```bash
@@ -68,11 +102,13 @@ Nunca suba estes arquivos para o GitHub:
 ```text
 .env
 config.yaml
+backtest.yaml
 logs/
 state.json
 positions.json
 *.db
 *.jsonl
+backtests/results/
 ```
 
 ## Regras de risco padrão
