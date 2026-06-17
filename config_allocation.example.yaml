@@ -1,0 +1,40 @@
+exchange:
+  name: binance
+  symbol: BTCUSDT
+  market_type: spot
+  mode: paper
+  base_url: ${BINANCE_BASE_URL}
+
+loop:
+  decision_every_minutes: 15
+  use_closed_candles_only: true
+
+historical_data:
+  interval: 1d
+  limit: 1000
+
+indicators:
+  sma_200d: 200
+  ema_50d: 50
+  ema_20d: 20
+  rsi_period: 14
+  atr_period: 14
+  volume_ma: 20
+  momentum_windows: [90, 180, 360]
+
+allocation:
+  rebalance_threshold: 0.10
+  min_trade_usdt: 10
+  max_allocation: 0.85
+  targets:
+    bear_strong: 0.00
+    bear_weakening: 0.20
+    neutral: 0.20
+    accumulation: 0.35
+    bull_confirmed: 0.70
+    strong_bull: 0.85
+    euphoria_reduced: 0.60
+
+runtime:
+  state_file: allocation_state.json
+  log_file: logs/allocation_decisions.jsonl
