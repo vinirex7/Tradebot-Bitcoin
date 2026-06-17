@@ -102,3 +102,17 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Runtime/local bot files
+allocation_state.json
+allocation_state_live.json
+config_allocation.yaml
+config_allocation_live.yaml
+logs/
+
+# Backtest generated outputs
+backtests/allocation_results/
+backtests/allocation_results_1y/
+backtests/allocation_results_eth_v2/
+backtests/allocation_results_v2/
+backtests/allocation_results_v2_1y/

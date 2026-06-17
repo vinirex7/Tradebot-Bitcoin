@@ -1,0 +1,35 @@
+backtest:
+  symbol: BTCUSDT
+  interval: 1d
+  start: "2023-06-17"
+  end: null
+  warmup_candles: 370
+  initial_capital_usdt: 1000.0
+  fee_rate: 0.001
+  slippage_rate: 0.0005
+  output_dir: backtests/allocation_results_v2_1y
+
+strategy:
+  name: btc_modern_regime_allocation_v2_aggressive_last_1y
+
+indicators:
+  sma_200d: 200
+  ema_50d: 50
+  ema_20d: 20
+  rsi_period: 14
+  atr_period: 14
+  volume_ma: 20
+  momentum_windows: [90, 180, 360]
+
+allocation:
+  rebalance_threshold: 0.12
+  min_trade_usdt: 10
+  max_allocation: 0.95
+  targets:
+    bear_strong: 0.00
+    bear_weakening: 0.25
+    neutral: 0.25
+    accumulation: 0.45
+    bull_confirmed: 0.80
+    strong_bull: 0.95
+    euphoria_reduced: 0.70
