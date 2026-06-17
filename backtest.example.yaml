@@ -1,0 +1,65 @@
+backtest:
+  symbol: BTCUSDT
+  interval: 1d
+  start: "2017-08-17"
+  end: null
+  initial_capital_usdt: 1000.0
+  fee_rate: 0.001       # 0.10% Binance spot default approximation
+  slippage_rate: 0.0005 # 0.05% conservative simulation
+  output_dir: backtests/results
+
+strategy:
+  name: vini_btc_regime_momentum_v1
+
+historical_data:
+  interval: 1d
+  limit: 1000
+
+risk:
+  max_exposure: 0.60
+  cash_buffer: 0.40
+  risk_per_trade: 0.0075
+  max_stop_distance: 0.15
+  min_stop_distance: 0.06
+  daily_drawdown_pause: 0.025
+  max_daily_loss: 0.035
+  max_consecutive_losses: 3
+  cooldown_after_loss_hours: 24
+  cooldown_after_stop_hours: 48
+
+regime:
+  buy_threshold_reversal: 55
+  buy_threshold_trend: 70
+  no_buy_above_weekly_rsi: 75
+  no_buy_if_distance_sma200d_above: 0.35
+
+indicators:
+  sma_200d: 200
+  ema_50d: 50
+  ema_20d: 20
+  rsi_period: 14
+  atr_period: 14
+  volume_ma: 20
+  momentum_windows: [90, 180, 360]
+
+entry:
+  reversal_position_fraction: 0.25
+  trend_position_fraction: 0.50
+  max_position_fraction: 0.60
+  breakout_lookback_days: 20
+  reversal_breakout_days: 7
+  breakout_volume_multiplier: 1.2
+  pullback_rsi_min: 40
+  pullback_rsi_max: 55
+
+exit:
+  initial_stop_atr_multiplier: 2.5
+  default_stop_pct: 0.10
+  hard_stop_pct: 0.12
+  trailing_stop_low_vol: 0.08
+  trailing_stop_normal: 0.12
+  trailing_stop_high_vol: 0.15
+  take_profit_1_r: 2
+  take_profit_1_fraction: 0.25
+  take_profit_2_r: 3
+  take_profit_2_fraction: 0.25
