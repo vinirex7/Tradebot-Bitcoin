@@ -1,48 +1,40 @@
 # Tradebot Bitcoin
 
-Robô especialista em **BTCUSDT Spot na Binance**, baseado em regime de mercado, momentum ajustado por volatilidade, tendência, risco e execução segura.
+Robô especialista em **BTCUSDT Spot na Binance**, com duas linhas de estratégia:
 
-> Projeto educacional e experimental. Não é recomendação financeira. Use primeiro em paper trade.
+1. **Vini BTC Regime Momentum Bot v3**: modelo antigo de entrada/saída por sinal.
+2. **BTC Modern Regime Allocation v1**: modelo novo de alocação dinâmica por regime, pensado para o Bitcoin dos últimos anos.
 
-## Estratégia confirmada
+> Projeto educacional e experimental. Não é recomendação financeira. Use primeiro em backtest e paper trade.
 
-Nome: **Vini BTC Regime Momentum Bot v1**
+## Estratégia nova: BTC Modern Regime Allocation v1
 
-O bot não tenta prever cada candle. Ele identifica o regime do Bitcoin:
+A estratégia nova não tenta apenas decidir `BUY` ou `SELL`. Ela calcula uma **alocação alvo em BTC**.
 
-1. Bear/defesa: fica em USDT.
-2. Reversão/acumulação: compra pequeno.
-3. Alta confirmada: aumenta exposição.
-4. Alta madura/distribuição: reduz posição.
-5. Euforia/topo: vende parcial ou sai.
+| Regime | Alvo em BTC |
+|---|---:|
+| Bear forte | 0% |
+| Bear enfraquecendo | 20% |
+| Neutro estrutural | 20% |
+| Acumulação/recuperação | 35% |
+| Alta confirmada | 70% |
+| Alta forte | 85% |
+| Euforia esfriando | 60% |
 
-### Coração da lógica
-
-```text
-Macro favorável + preço acima da tendência + momentum positivo + volatilidade aceitável = compra/tendência.
-
-Macro piorando + perda da SMA200D + momentum negativo = defesa/venda.
-
-Alta esticada + divergência + volume vendedor = venda parcial/proteção.
-```
-
-## Ativo
-
-- Mercado: Spot
-- Par: BTCUSDT
-- Exchange: Binance
-- Frequência de decisão: 15 minutos
-- Sinais principais: candles fechados de 1d, 4h e 1h
+A ideia é evitar o erro dos backtests antigos: ficar tempo demais em USDT e perder grandes movimentos do Bitcoin.
 
 ## Arquivos importantes
 
 ```text
-bot.py                     Entrada principal do bot
-backtest.py                Entrada principal do backtest
-config.example.yaml         Modelo de configuração sem segredos
-backtest.example.yaml       Modelo de configuração do backtest
-.env.example                Modelo das variáveis de ambiente
-tradebot/                   Código principal
+bot.py                         Bot antigo por sinais
+backtest.py                    Backtest antigo por sinais
+bot_allocation.py              Bot novo por alocação
+backtest_allocation.py         Backtest novo por alocação
+config.example.yaml            Config exemplo do bot antigo
+config_allocation.example.yaml Config exemplo do bot novo
+backtest.example.yaml          Config exemplo do backtest antigo
+backtest_allocation.yaml       Config do backtest novo
+tradebot/                      Código principal
 ```
 
 ## Instalação
@@ -51,27 +43,23 @@ tradebot/                   Código principal
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env
-cp config.example.yaml config.yaml
 ```
 
-Edite `.env` com suas chaves da Binance e `config.yaml` com o modo desejado.
-
-## Rodar backtest
+## Rodar backtest da estratégia nova
 
 O backtest usa dados públicos da Binance e não envia ordens.
 
 ```bash
-cp backtest.example.yaml backtest.yaml
-python backtest.py --config backtest.yaml --save
+python backtest_allocation.py --config backtest_allocation.yaml --save
+cat backtests/allocation_results/metrics.json
 ```
 
-Saídas geradas em `backtests/results/`:
+Saídas geradas em `backtests/allocation_results/`:
 
 ```text
 metrics.json       Métricas principais
 equity_curve.csv   Curva de patrimônio
-trades.csv         Trades simulados
+trades.csv         Rebalanceamentos simulados
 decisions.csv      Decisões diárias do modelo
 ```
 
@@ -83,16 +71,30 @@ CAGR
 max drawdown
 Sharpe
 Sortino
-profit factor
-win rate
 exposure time
+alocação média em BTC
 resultado vs buy and hold
 ```
 
-## Rodar em paper trade
+## Rodar bot novo em paper trade
 
 ```bash
-python bot.py --config config.yaml
+cp config_allocation.example.yaml config_allocation.yaml
+python bot_allocation.py --config config_allocation.yaml --once
+```
+
+Para rodar continuamente:
+
+```bash
+python bot_allocation.py --config config_allocation.yaml
+```
+
+## Rodar backtest antigo
+
+```bash
+cp backtest.example.yaml backtest.yaml
+python backtest.py --config backtest.yaml --save
+cat backtests/results/metrics.json
 ```
 
 ## Segurança
@@ -102,23 +104,17 @@ Nunca suba estes arquivos para o GitHub:
 ```text
 .env
 config.yaml
+config_allocation.yaml
 backtest.yaml
 logs/
 state.json
+allocation_state.json
 positions.json
 *.db
 *.jsonl
 backtests/results/
+backtests/allocation_results/
 ```
-
-## Regras de risco padrão
-
-- Exposição máxima: 60%
-- Caixa mínimo: 40%
-- Risco por trade: 0,75%
-- Stop padrão: ATR ou 8–12%
-- Trailing stop: 8–15%, conforme volatilidade
-- Pausa após perdas consecutivas
 
 ## Modos
 
