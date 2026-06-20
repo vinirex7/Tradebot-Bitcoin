@@ -68,30 +68,34 @@ class AllocationStrategyEngine:
 
         alloc_state = state["allocation"]
 
+        free_quote = 0.0
+        free_base = 0.0
+        actual_equity = 0.0
+
         if self.mode == "paper":
             cash = float(alloc_state.get("paper_cash_usdt", float(state.get("paper_equity_usdt", 1000.0))))
             base_qty = float(alloc_state.get("paper_btc_qty", 0.0))
             usable_capital = cash + base_qty * price
+            equity = usable_capital
 
         else:
             if self.max_capital_usdt <= 0:
                 raise RuntimeError("live.max_capital_usdt must be greater than 0 in live mode")
 
+            # In live mode, balances must come from Binance on every cycle.
+            # State is only telemetry; it must never be the source of truth for equity.
             account = self.client.account()
             free_quote = _asset_free_balance(account, self.quote_asset)
             free_base = _asset_free_balance(account, self.base_asset)
+            actual_equity = free_quote + free_base * price
 
-            if "live_cash_usdt" not in alloc_state and "live_base_qty" not in alloc_state:
-                alloc_state["live_cash_usdt"] = min(self.max_capital_usdt, free_quote)
-                alloc_state["live_base_qty"] = 0.0
+            usable_capital = min(self.max_capital_usdt, actual_equity)
+            cash = min(free_quote, usable_capital)
 
-            cash = float(alloc_state.get("live_cash_usdt", 0.0))
-            base_qty = float(alloc_state.get("live_base_qty", 0.0))
+            max_base_qty_in_scope = max(0.0, usable_capital - cash) / price if price > 0 else 0.0
+            base_qty = min(free_base, max_base_qty_in_scope)
+            equity = usable_capital
 
-            cash = min(cash, self.max_capital_usdt)
-            usable_capital = min(self.max_capital_usdt, cash + base_qty * price)
-
-        equity = cash + base_qty * price
         current_alloc = (base_qty * price / equity) if equity > 0 else 0.0
         target_alloc = max(0.0, min(float(signal.target_allocation), 1.0))
         gap = target_alloc - current_alloc
@@ -104,6 +108,10 @@ class AllocationStrategyEngine:
             "price": price,
             "equity_usdt": equity,
             "usable_capital_usdt": usable_capital,
+            "max_capital_usdt": self.max_capital_usdt if self.mode != "paper" else None,
+            "actual_equity_usdt": actual_equity if self.mode != "paper" else equity,
+            "free_quote": free_quote if self.mode != "paper" else cash,
+            "free_base": free_base if self.mode != "paper" else base_qty,
             "current_allocation": current_alloc,
             "target_allocation": target_alloc,
             "regime": signal.regime,
@@ -116,6 +124,11 @@ class AllocationStrategyEngine:
             decision["action"] = "HOLD"
             decision["order"] = None
             decision["reason"] = "usable_capital_below_min_trade"
+            if self.mode != "paper":
+                alloc_state["live_cash_usdt"] = free_quote
+                alloc_state["live_base_qty"] = free_base
+                alloc_state["live_equity_usdt"] = actual_equity
+                alloc_state["live_usable_capital_usdt"] = usable_capital
             save_state(self.state_file, state)
             append_jsonl(self.log_file, decision)
             return decision
@@ -131,7 +144,7 @@ class AllocationStrategyEngine:
                 if quote_qty > self.min_trade_usdt:
                     decision["action"] = "BUY"
 
-                    if self.mode == "paper" or self.dry_run:
+                    if self.mode == "paper":
                         qty = quote_qty / price
                         cash -= quote_qty
                         base_qty += qty
@@ -141,6 +154,15 @@ class AllocationStrategyEngine:
                             "side": "BUY",
                             "quote_qty": quote_qty,
                             "qty": qty,
+                        }
+                    elif self.dry_run:
+                        decision["order"] = {
+                            "mode": self.mode,
+                            "dry_run": self.dry_run,
+                            "side": "BUY",
+                            "quote_qty": quote_qty,
+                            "qty": quote_qty / price,
+                            "note": "dry_run_no_order_sent",
                         }
                     else:
                         order = live_market_buy(self.client, self.symbol, quote_qty)
@@ -160,7 +182,7 @@ class AllocationStrategyEngine:
                 if qty_to_sell * price > self.min_trade_usdt:
                     decision["action"] = "SELL"
 
-                    if self.mode == "paper" or self.dry_run:
+                    if self.mode == "paper":
                         cash += qty_to_sell * price
                         base_qty -= qty_to_sell
                         decision["order"] = {
@@ -169,6 +191,15 @@ class AllocationStrategyEngine:
                             "side": "SELL",
                             "quote_qty": qty_to_sell * price,
                             "qty": qty_to_sell,
+                        }
+                    elif self.dry_run:
+                        decision["order"] = {
+                            "mode": self.mode,
+                            "dry_run": self.dry_run,
+                            "side": "SELL",
+                            "quote_qty": qty_to_sell * price,
+                            "qty": qty_to_sell,
+                            "note": "dry_run_no_order_sent",
                         }
                     else:
                         order = live_market_sell(self.client, self.symbol, qty_to_sell)
@@ -186,9 +217,10 @@ class AllocationStrategyEngine:
             alloc_state["paper_btc_qty"] = base_qty
             alloc_state["paper_equity_usdt"] = cash + base_qty * price
         else:
-            alloc_state["live_cash_usdt"] = min(cash, self.max_capital_usdt)
-            alloc_state["live_base_qty"] = base_qty
-            alloc_state["live_equity_usdt"] = min(self.max_capital_usdt, cash + base_qty * price)
+            alloc_state["live_cash_usdt"] = free_quote
+            alloc_state["live_base_qty"] = free_base
+            alloc_state["live_equity_usdt"] = actual_equity
+            alloc_state["live_usable_capital_usdt"] = usable_capital
 
         save_state(self.state_file, state)
         append_jsonl(self.log_file, decision)
