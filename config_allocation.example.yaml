@@ -3,7 +3,6 @@ exchange:
   symbol: BTCUSDT
   market_type: spot
   mode: paper
-  base_url: ${BINANCE_BASE_URL}
 
 loop:
   decision_every_minutes: 15
@@ -23,17 +22,34 @@ indicators:
   momentum_windows: [90, 180, 360]
 
 allocation:
-  rebalance_threshold: 0.10
+  rebalance_threshold: 0.15
   min_trade_usdt: 10
-  max_allocation: 0.85
+  max_allocation: 0.95
+
   targets:
     bear_strong: 0.00
     bear_weakening: 0.20
-    neutral: 0.20
-    accumulation: 0.35
-    bull_confirmed: 0.70
-    strong_bull: 0.85
-    euphoria_reduced: 0.60
+    chop: 0.20
+    neutral: 0.25
+    accumulation: 0.45
+    bull_confirmed: 0.80
+    strong_bull: 0.95
+    euphoria_reduced: 0.70
+
+  chop_filter:
+    enabled: true
+    max_abs_dist_sma200d: 0.06
+    max_abs_m90: 0.25
+    max_abs_sma200_slope20_pct: 0.015
+    rsi_low: 45
+    rsi_high: 55
+
+  volatility_scaling:
+    enabled: true
+    high_atr_pct: 0.08
+    extreme_atr_pct: 0.11
+    high_multiplier: 0.75
+    extreme_multiplier: 0.55
 
 runtime:
   state_file: allocation_state.json
